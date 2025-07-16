@@ -10,7 +10,7 @@ from langchain.memory import ConversationBufferMemory
 
 
 st.set_page_config(layout="wide")
-st.title("🧠 RockyBot Pro: Local News Research Assistant")
+st.title("🧠 ArticleBot Pro: Local News Research Assistant")
 
 
 if "chat_history" not in st.session_state:
@@ -91,7 +91,7 @@ if query:
             )
             result = chain.invoke({"question": query})
             st.session_state.chat_history.append(("User", query))
-            st.session_state.chat_history.append(("RockyBot", result["answer"]))
+            st.session_state.chat_history.append(("ArticleBot", result["answer"]))
             
             st.subheader("Answer:")
             st.write(result["answer"])
