@@ -5,13 +5,21 @@ from utils.ingestion import load_and_split_urls
 from utils.embeddings import get_hf_embeddings
 from utils.llm_interface import get_local_llm
 from langchain_community.vectorstores import FAISS
-from langchain.chains import RetrievalQAWithSourcesChain
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 
 
 st.set_page_config(layout="wide")
 st.title("🧠 RockyBot Pro: Local News Research Assistant")
+
+
+if "chat_history" not in st.session_state:
+                st.session_state.chat_history = []
+if st.sidebar.button("🧹 Clear Chat History"):
+    st.session_state.chat_history = []
+    st.rerun()
+    st.success("Chat history cleared.")
+
 
 # Sidebar input
 st.sidebar.header("Enter News URLs")
@@ -68,24 +76,47 @@ if query:
                 db = pickle.load(f)
             
             llm = get_local_llm()
-            chain = RetrievalQAWithSourcesChain.from_llm(llm=llm, retriever=db.as_retriever())
-            result = chain({"question": query}, return_only_outputs=True)
+            memory = ConversationBufferMemory(
+                memory_key="chat_history",
+                return_messages=True,
+                output_key='answer'
+            )
+
+            chain = ConversationalRetrievalChain.from_llm(
+                llm=llm,
+                retriever=db.as_retriever(),
+                memory=memory,
+                return_source_documents=True,
+                output_key = 'answer'
+            )
+            result = chain.invoke({"question": query})
+            st.session_state.chat_history.append(("User", query))
+            st.session_state.chat_history.append(("RockyBot", result["answer"]))
             
             st.subheader("Answer:")
             st.write(result["answer"])
             
             st.subheader("Sources:")
-            sources = result.get("sources", "")
-            if sources:
-                for source in sources.split("\n"):
-                    if source.strip():
-                        st.write(source)
+            source_docs = result.get("source_documents", [])
+            if source_docs:
+                for doc in source_docs:
+                    st.write(f"- {doc.metadata.get('source', 'Unknown')}")
             else:
-                st.write("No sources found")
+                st.write("No sources found.")
                 
         except Exception as e:
             st.error(f"❌ Error during query: {str(e)}")
             import traceback
             st.error(f"Traceback: {traceback.format_exc()}")
+
     else:
         st.warning("⚠️ Please process some URLs first.")
+
+
+with st.expander("🕒 Chat History", expanded=False):
+    if st.session_state.chat_history:
+        for sender, message in st.session_state.chat_history:
+            st.markdown(f"**{sender}:** {message}")
+    else:
+        st.write("No conversation yet.")
+
