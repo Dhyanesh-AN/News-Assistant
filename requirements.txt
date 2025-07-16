@@ -1,0 +1,10 @@
+streamlit
+langchain==0.1.14
+langchain-community==0.0.34
+faiss-cpu
+sentence-transformers
+transformers
+huggingface-hub
+beautifulsoup4
+html2text
+unstructured
